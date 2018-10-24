@@ -1,4 +1,4 @@
-from tkinter import Tk, messagebox, scrolledtext, Menu, Toplevel, Label, NW, NE, CENTER
+from tkinter import Tk, messagebox, scrolledtext, Menu, Toplevel, Label, StringVar, NW, NE, CENTER
 from tkinter.ttk import Entry, Button, Radiobutton
 from yaml import safe_load, dump
 from os.path import isfile, abspath
@@ -32,15 +32,54 @@ def about():
     aboutWindow.mainloop()
 
 def settings():
+    def saveSettings():
+        settingsWindow.destroy()
+        restart = messagebox.askyesno("", "The app will restart for the changes to take effect.\nDo you want to restart the app now?")
+        if restart == True:
+            execl(executable, abspath(__file__), *argv)
+        elif restart == False:
+            messagebox.showwarning("", "Please save your work and restart the app as soon as possible for changes to take effect.")
     settingsWindow = Toplevel()
     settingsWindow["bg"] = "white"
     settingsWindow.wm_resizable(False, False)
     settingsWindow.focus_set()
     settingsWindow.grab_set()
-    sourceLabel = Label(settingsWindow, text="Dictionary source:", font=("Segoe UI", 13))
-    sourceLabel.pack(anchor=NE)
+    sourceLabel = Label(settingsWindow, text="Dictionary source:", font=("Segoe UI", 16))
+    sourceLabel["bg"] = "white"
+    sourceLabel.pack(anchor=NW)
     wikiRadioButton = Radiobutton(settingsWindow, text="WikDictionary")
-    wikiRadioButton.pack(anchor=NE)
+    wikiRadioButton.pack(anchor=NW, padx=10)
+    urbanRadioButton = Radiobutton(settingsWindow, text="Urban Dictionary")
+    urbanRadioButton.pack(anchor=NW, padx=10)
+    disclaimerLabel = Label(settingsWindow, text="All content belongs to their respective owners. Please agree to their respective terms and conditions before use.", font=("Segoe UI", 7))
+    disclaimerLabel["bg"] = "white"
+    disclaimerLabel.pack(anchor=NW)
+    langLabel = Label(settingsWindow, text="Dictionary language:", font=("Segoe UI", 16))
+    langLabel["bg"] = "white"
+    langLabel.pack(anchor=NW)
+    langInput = Entry(settingsWindow, text=lang)
+    langInput.pack(anchor=NW, padx=10)
+    langInstructLabel = Label(settingsWindow, text="English = en, Italian = it, French = fr, etc.", font=("Segoe UI", 7))
+    langInstructLabel["bg"] = "white"
+    langInstructLabel.pack(anchor=NW)
+    themeLabel = Label(settingsWindow, text="App theme (not working):", font=("Segoe UI", 16))
+    themeLabel["bg"] = "white"
+    themeLabel.pack(anchor=NW)
+    lightRadioButton = Radiobutton(settingsWindow, text="Light")
+    lightRadioButton.pack(anchor=NW, padx=10)
+    lightRadioButton = Radiobutton(settingsWindow, text="Dark")
+    lightRadioButton.pack(anchor=NW, padx=10)
+    saveSettingsButton = Button(settingsWindow, text="Save settings", command=saveSettings)
+    saveSettingsButton.pack()
+    resetSettingsButton = Button(settingsWindow, text="Reset settings")
+    resetSettingsButton.pack()
+    mainWindow.update_idletasks()
+    settingsWindow.update_idletasks()
+    w = settingsWindow.winfo_width()
+    h = settingsWindow.winfo_height()
+    x = mainWindow.winfo_width()/2 + mainWindow.winfo_x()-218
+    y = mainWindow.winfo_height()/2 + mainWindow.winfo_y()-130
+    settingsWindow.geometry("%dx%d+%d+%d" % (w, h, x, y))
     settingsWindow.mainloop()
 
 def checkNetwork():
