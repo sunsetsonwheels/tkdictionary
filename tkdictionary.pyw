@@ -1,4 +1,4 @@
-from tkinter import Tk, messagebox, scrolledtext, Menu, Toplevel, Label, StringVar, NW, NE, CENTER, END
+from tkinter import Tk, messagebox, scrolledtext, Menu, Toplevel, Label, StringVar, NW, NE, CENTER, END, DISABLED
 from tkinter.ttk import Entry, Button, Radiobutton
 from yaml import safe_load, dump
 from os.path import isfile, abspath
@@ -7,6 +7,7 @@ from sys import executable, argv
 from requests import get as rget
 from requests import ConnectionError
 from threading import Thread
+from wiktionaryparser import WiktionaryParser
 
 def start_thread(function):
     t = Thread(target=function)
@@ -35,7 +36,7 @@ def about():
     appName_label = Label(aboutWindow, text="TkDictionary v.0.8", font=('Segoe UI Bold', 18))
     appName_label["bg"] = "white"
     appName_label.pack()
-    aboutMessage = "A dictionary application written in Python that uses\nGoogle or Urban Dictionary.\n\n(C) Nguyen Thanh Nam (jkelol111) 2018\nLicensed under the MIT license."
+    aboutMessage = "A dictionary application written in Python that uses\nWiki or Urban Dictionary.\n\n(C) Nguyen Thanh Nam (jkelol111) 2018\nLicensed under the MIT license."
     aboutMessage_label = Label(aboutWindow, text=aboutMessage, font=("Segoe UI", 12))
     aboutMessage_label["bg"] = "white"
     aboutMessage_label.pack()
@@ -67,7 +68,7 @@ def settings():
         if resetY == True:
             settingsWindow.destroy()
             with open("appcfg.yml", 'w') as config_file:
-                config_contents = dict(language='en', source='googledictionary', theme="light")
+                config_contents = dict(language='english', source='urbandictionary', theme="light")
                 dump(config_contents, config_file)
             restartAppToApplyChanges()   
         elif resetY == False:
@@ -87,11 +88,11 @@ def settings():
     sourceLabel = Label(settingsWindow, text="Dictionary source:", font=("Segoe UI", 16))
     sourceLabel["bg"] = "white"
     sourceLabel.pack(anchor=NW)
-    wikiRadioButton = Radiobutton(settingsWindow, text="Google Dictionary (not working)", variable=dictChoice, value="googledictionary")
+    wikiRadioButton = Radiobutton(settingsWindow, text="Wiktionary", variable=dictChoice, value="wiktionary")
     wikiRadioButton.pack(anchor=NW, padx=10)
     urbanRadioButton = Radiobutton(settingsWindow, text="Urban Dictionary", variable=dictChoice, value="urbandictionary")
     urbanRadioButton.pack(anchor=NW, padx=10)
-    if src == "googledictionary":
+    if src == "wiktionary":
         wikiRadioButton.invoke()
     elif src == "urbandictionary":
         urbanRadioButton.invoke()
@@ -105,10 +106,10 @@ def settings():
     langLabel.pack(anchor=NW)
     langInput = Entry(settingsWindow, textvariable=langChoice)
     langInput.pack(anchor=NW, padx=10)
-    langInstructLabel1 = Label(settingsWindow, text="This option only works with Google Dictionary. Not all languages available.", font=("Segoe UI", 7))
+    langInstructLabel1 = Label(settingsWindow, text="This option only works with Wiktionary. Not all languages available.", font=("Segoe UI", 7))
     langInstructLabel1["bg"] = "white"
     langInstructLabel1.pack(anchor=NW)
-    langInstructLabel2 = Label(settingsWindow, text="Example: English = en, Italian = it, French = fr, etc.", font=("Segoe UI", 7))
+    langInstructLabel2 = Label(settingsWindow, text="Example: English = english, Italian = italian, French = french, etc.", font=("Segoe UI", 7))
     langInstructLabel2["bg"] = "white"
     langInstructLabel2.pack(anchor=NW)
     themeLabel = Label(settingsWindow, text="App theme (not working):", font=("Segoe UI", 16))
@@ -141,29 +142,38 @@ def searchWord():
     word = wordEntry.get()
     clear_textbox()
     print_to_textbox("Loading, please wait...")
-    if src == "googledictionary":
-        parameters = {"define": word, "lang": lang}
-        result = rget("https://googledictionaryapi.eu-gb.mybluemix.net/", params=parameters).json()
+    if src == "wiktionary":
+        parser = WiktionaryParser()
+        result = parser.fetch(word, language=lang)
+        clear_textbox()
         from pprint import pprint
         pprint(result)
-        clear_textbox()
         print_to_textbox(word)
-        print_to_textbox("\nPhonetic: "+str(result["phonetic"]))
+        print_to_textbox("\nMeanings:")
+        for n in result[0]["definitions"]:
+            print(len(n))
+            for i in result[0]["definitions"][len(n)]["text"]:
+                print_to_textbox(i)
     elif src == "urbandictionary":
         parameters2 = {"term": word}
         result2 = rget("http://api.urbandictionary.com/v0/define", params=parameters2).json()
         clear_textbox()
-        print_to_textbox(word)
+        print_to_textbox(result2["list"][0]["word"])
         print_to_textbox("\nMost-voted definition:\n"+result2["list"][0]["definition"])
         print_to_textbox("\nExamples:\n"+result2["list"][0]["example"])
         print_to_textbox("\nBy user: "+result2["list"][0]["author"]+"        "+"Votes: UP: "+str(result2["list"][0]["thumbs_up"])+" DOWN: "+str(result2["list"][0]["thumbs_down"]))
+    else:
+        clear_textbox()
+        errmessage = "Dictionary with name null not found. Check your settings in 'Actions & others' above!"
+        print_to_textbox(errmessage)
+        messagebox.showerror("TkDictionary Error", errmessage)
 
 if not isfile("appcfg.yml"):
     createConfig = messagebox.askquestion("TkDictionary Error", "We couldn't find your configuration file. Do you want to create one?")
     if createConfig == "yes":
         try:
             with open("appcfg.yml", 'w') as config_file:
-                config_contents = dict(language='en', source='googledictionary', theme="light")
+                config_contents = dict(language='en', source='urbandictionary', theme="light")
                 dump(config_contents, config_file)
         except:
             messagebox.showerror("TkDictionary error", "Could not make config file. The app will now quit.")
@@ -202,12 +212,12 @@ wordEntry = Entry(mainWindow, font=("Segoe UI Bold", 13), justify=CENTER, width=
 wordEntry.focus_set()
 wordEntry.pack()
 
-if src == "googledictionary":
-    searchButton_text = "Search Google Dictionary..."
+if src == "wiktionary":
+    searchButton_text = "Search Wiktionary..."
 elif src == "urbandictionary":
     searchButton_text = "Search Urban Dictionary..."
 else:
-    searchButton_text = "Search null..."
+    searchButton_text = "Config Error! Check settings!"
 searchButton = Button(mainWindow, text=searchButton_text, command=lambda: start_thread(searchWord))
 searchButton.pack()
 
