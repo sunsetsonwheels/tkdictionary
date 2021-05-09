@@ -1,13 +1,16 @@
 from tkinter import Tk, messagebox, scrolledtext, Menu, Toplevel, Label, StringVar, NW, NE, CENTER, END, DISABLED
 from tkinter.ttk import Entry, Button, Radiobutton
-from yaml import safe_load, dump
-from os.path import isfile, abspath
+from os.path import abspath
 from os import execl
 from sys import executable, argv
 from requests import get as rget
 from requests import ConnectionError
 from threading import Thread
 from wiktionaryparser import WiktionaryParser
+from localStoragePy import localStoragePy
+import json
+
+localStorage = localStoragePy("me.jkelol111.tkdictionary", "text")
 
 def start_thread(function):
     t = Thread(target=function)
@@ -29,16 +32,13 @@ def checkNetwork():
 
 def about():
     aboutWindow = Toplevel()
-    aboutWindow["bg"] = "white"
     aboutWindow.wm_resizable(False, False)
     aboutWindow.focus_set()
     aboutWindow.grab_set()
-    appName_label = Label(aboutWindow, text="TkDictionary v.0.8", font=('Segoe UI Bold', 18))
-    appName_label["bg"] = "white"
+    appName_label = Label(aboutWindow, text="TkDictionary v.0.8")
     appName_label.pack()
     aboutMessage = "A dictionary application written in Python that uses\nWiki or Urban Dictionary.\n\n(C) Nguyen Thanh Nam (jkelol111) 2018\nLicensed under the MIT license."
-    aboutMessage_label = Label(aboutWindow, text=aboutMessage, font=("Segoe UI", 12))
-    aboutMessage_label["bg"] = "white"
+    aboutMessage_label = Label(aboutWindow, text=aboutMessage)
     aboutMessage_label.pack()
     ok_button = Button(aboutWindow, text="OK", command=lambda: aboutWindow.destroy())
     ok_button.pack()
@@ -67,26 +67,22 @@ def settings():
         resetY = messagebox.askyesno("", "This will reset TkDictionary to defaults. Do you want to continue?")
         if resetY == True:
             settingsWindow.destroy()
-            with open("appcfg.yml", 'w') as config_file:
-                config_contents = dict(language='english', source='urbandictionary', theme="light")
-                dump(config_contents, config_file)
+            config_contents = dict(language='english', source='urbandictionary', theme="light")
+            localStorage.setItem("config.json", json.dumps(config_contents))
             restartAppToApplyChanges()   
         elif resetY == False:
             settingsWindow.focus_set()
             settingsWindow.grab_set()         
     def saveSettings():
         settingsWindow.destroy()
-        with open("appcfg.yml", 'w') as config_file:
-            config_contents = dict(language=langChoice.get(), source=dictChoice.get(), theme=themeChoice.get())
-            dump(config_contents, config_file)
+        config_contents = dict(language=langChoice.get(), source=dictChoice.get(), theme=themeChoice.get())
+        localStorage.setItem("config.json", json.dumps(config_contents))
         restartAppToApplyChanges()
     settingsWindow = Toplevel()
-    settingsWindow["bg"] = "white"
     settingsWindow.wm_resizable(False, False)
     settingsWindow.focus_set()
     settingsWindow.grab_set()
-    sourceLabel = Label(settingsWindow, text="Dictionary source:", font=("Segoe UI", 16))
-    sourceLabel["bg"] = "white"
+    sourceLabel = Label(settingsWindow, text="Dictionary source:")
     sourceLabel.pack(anchor=NW)
     wikiRadioButton = Radiobutton(settingsWindow, text="Wiktionary", variable=dictChoice, value="wiktionary")
     wikiRadioButton.pack(anchor=NW, padx=10)
@@ -98,22 +94,17 @@ def settings():
         urbanRadioButton.invoke()
     else:
         pass
-    disclaimerLabel = Label(settingsWindow, text="All content belongs to their respective owners. Please agree to their respective terms and conditions before use.", font=("Segoe UI", 7))
-    disclaimerLabel["bg"] = "white"
+    disclaimerLabel = Label(settingsWindow, text="All content belongs to their respective owners. Please agree to their respective terms and conditions before use.")
     disclaimerLabel.pack(anchor=NW)
-    langLabel = Label(settingsWindow, text="Dictionary language:", font=("Segoe UI", 16))
-    langLabel["bg"] = "white"
+    langLabel = Label(settingsWindow, text="Dictionary language:")
     langLabel.pack(anchor=NW)
     langInput = Entry(settingsWindow, textvariable=langChoice)
     langInput.pack(anchor=NW, padx=10)
-    langInstructLabel1 = Label(settingsWindow, text="This option only works with Wiktionary. Not all languages available.", font=("Segoe UI", 7))
-    langInstructLabel1["bg"] = "white"
+    langInstructLabel1 = Label(settingsWindow, text="This option only works with Wiktionary. Not all languages available.")
     langInstructLabel1.pack(anchor=NW)
-    langInstructLabel2 = Label(settingsWindow, text="Example: English = english, Italian = italian, French = french, etc.", font=("Segoe UI", 7))
-    langInstructLabel2["bg"] = "white"
+    langInstructLabel2 = Label(settingsWindow, text="Example: English = english, Italian = italian, French = french, etc.")
     langInstructLabel2.pack(anchor=NW)
-    themeLabel = Label(settingsWindow, text="App theme (not working):", font=("Segoe UI", 16))
-    themeLabel["bg"] = "white"
+    themeLabel = Label(settingsWindow, text="App theme (not working):")
     themeLabel.pack(anchor=NW)
     lightRadioButton = Radiobutton(settingsWindow, text="Light", variable=themeChoice, value="light")
     lightRadioButton.pack(anchor=NW, padx=10)
@@ -168,13 +159,11 @@ def searchWord():
         print_to_textbox(errmessage)
         messagebox.showerror("TkDictionary Error", errmessage)
 
-if not isfile("appcfg.yml"):
+if not localStorage.getItem("config.json"):
     createConfig = messagebox.askquestion("TkDictionary Error", "We couldn't find your configuration file. Do you want to create one?")
     if createConfig == "yes":
         try:
-            with open("appcfg.yml", 'w') as config_file:
-                config_contents = dict(language='en', source='urbandictionary', theme="light")
-                dump(config_contents, config_file)
+            localStorage.setItem("config.json", json.dumps(dict(language='en', source='urbandictionary', theme="light")))
         except:
             messagebox.showerror("TkDictionary error", "Could not make config file. The app will now quit.")
             exit()
@@ -184,8 +173,7 @@ if not isfile("appcfg.yml"):
         exit()
 else:
     try:
-        with open("appcfg.yml", 'r') as config_file:
-            config_contents = safe_load(config_file)
+        config_contents = json.loads(localStorage.getItem("config.json"))
         lang = config_contents["language"]
         src = config_contents["source"]
         theme = config_contents["theme"]
@@ -195,7 +183,6 @@ else:
 mainWindow = Tk()
 mainWindow.title("TkDictionary")
 mainWindow.wm_resizable(False, False)
-mainWindow["bg"] = "white"
 mainWindow.focus_get()
 
 menubar = Menu(mainWindow)
@@ -208,7 +195,7 @@ aboutMenu = Menu(menubar, tearoff=0)
 aboutMenu.add_command(label="About TkDictionary...", command=about)
 menubar.add_cascade(label="About & help", menu=aboutMenu)
 
-wordEntry = Entry(mainWindow, font=("Segoe UI Bold", 13), justify=CENTER, width=mainWindow.winfo_reqwidth()-160)
+wordEntry = Entry(mainWindow, justify=CENTER, width=mainWindow.winfo_reqwidth()-160)
 wordEntry.focus_set()
 wordEntry.pack()
 
@@ -221,7 +208,7 @@ else:
 searchButton = Button(mainWindow, text=searchButton_text, command=lambda: start_thread(searchWord))
 searchButton.pack()
 
-dictionaryTextView = scrolledtext.ScrolledText(mainWindow, font=("Segoe UI", 12))
+dictionaryTextView = scrolledtext.ScrolledText(mainWindow)
 dictionaryTextView.pack()
 
 mainWindow.config(menu=menubar)
